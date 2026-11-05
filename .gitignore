@@ -1,0 +1,19 @@
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+MemoryCaptures/
+.vs/
+.vscode/
+*.csproj
+*.sln
+*.apk
+*.aab
+*.unitypackage
+Assets/Modelo 3D/Texturas-adicionales/
+Assets/Modelo 3D/Texturas-adicionales.meta
+Assets/Modelo 3D/Modelos/Planta-Andahuasi-Electrico.obj
+Assets/Modelo 3D/Modelos/Planta-Andahuasi-Electrico.obj.meta
