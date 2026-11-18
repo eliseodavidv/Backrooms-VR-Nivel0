@@ -50,7 +50,7 @@ El juego guarda una fila por partida en `backrooms_stats.csv` con las columnas:
 `fecha_utc, partida, resultado, causa, tiempo_s, detectado, teletransportes, escondites, mini_monstruos_muertos, voto`
 
 El archivo se crea en `Application.persistentDataPath`. En el Quest es:
-`/sdcard/Android/data/com.DefaultCompany.VRMetaQuest02-Eliseo/files/backrooms_stats.csv`
+`/sdcard/Android/data/com.DefaultCompany.VRMetaQuest02_Eliseo/files/backrooms_stats.csv`
 (se puede copiar con `adb pull`). En Windows, en el Editor: `%USERPROFILE%\AppData\LocalLow\DefaultCompany\VRMetaQuest02_Eliseo\backrooms_stats.csv`.
 
 ## Equipo
