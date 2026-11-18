@@ -51,7 +51,7 @@ El juego guarda una fila por partida en `backrooms_stats.csv` con las columnas:
 
 El archivo se crea en `Application.persistentDataPath`. En el Quest es:
 `/sdcard/Android/data/com.DefaultCompany.VRMetaQuest02-Eliseo/files/backrooms_stats.csv`
-(se puede copiar con `adb pull`). En Windows, en el Editor: `%USERPROFILE%\AppData\LocalLow\DefaultCompany\VRMetaQuest02_Eliseoackrooms_stats.csv`.
+(se puede copiar con `adb pull`). En Windows, en el Editor: `%USERPROFILE%\AppData\LocalLow\DefaultCompany\VRMetaQuest02_Eliseo\backrooms_stats.csv`.
 
 ## Equipo
 Alejandro Vargas Rios, Eliseo David Velásquez Díaz, Paolo Centeno.
