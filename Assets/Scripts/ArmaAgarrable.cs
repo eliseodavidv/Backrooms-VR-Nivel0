@@ -207,6 +207,35 @@ public class ArmaAgarrable : MonoBehaviour
         ultimaFase = f;
     }
 
+    // Partida nueva desde cero (lo llama el GameManager): estado, rotulo y posicion originales, aunque el jugador
+    // tuviera el arma en la mano (se apagan un momento los interactables del SDK para que la suelte).
+    public void ReiniciarPartida()
+    {
+        ReiniciarEstado();
+        if (rotulo != null) rotulo.SetActive(true);
+        if (Sostenida && isActiveAndEnabled) StartCoroutine(SoltarYVolverAMesa());
+        else VolverAMesa();
+    }
+
+    // Suelta el arma ya: se apagan sus interactables del SDK (al desactivarse deseleccionan). Se usa justo antes de recargar la escena.
+    public void SoltarAhora()
+    {
+        if (interactables != null)
+            foreach (var mb in interactables) if (mb != null) mb.enabled = false;
+    }
+
+    System.Collections.IEnumerator SoltarYVolverAMesa()
+    {
+        if (interactables != null)
+            foreach (var mb in interactables) if (mb != null) mb.enabled = false;
+        yield return null;
+        yield return null;
+        if (interactables != null)
+            foreach (var mb in interactables) if (mb != null) mb.enabled = true;
+        rb.isKinematic = false;
+        VolverAMesa();
+    }
+
     void VolverAMesa()
     {
         if (rb.isKinematic) return;

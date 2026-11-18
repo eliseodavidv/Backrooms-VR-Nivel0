@@ -135,6 +135,7 @@ public static class BackroomsE4Builder
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         Debug.Log("[BackroomsE4Builder] E4 construido.");
         BackroomsFixesBuilder.Construir(); // paneles siempre por encima + guardia de cabeza + filtro de teletransporte
+        BackroomsMenuBuilder.Construir();  // menu de inicio con identidad Backrooms (reemplaza Panel_Menu y agrega Opciones / Creditos)
     }
 
     // ---------- reloj ----------

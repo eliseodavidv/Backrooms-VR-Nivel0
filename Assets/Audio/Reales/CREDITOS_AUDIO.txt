@@ -1,0 +1,73 @@
+CREDITOS DE AUDIO - Backrooms VR Nivel 0
+=========================================
+
+Fuente: Pixabay
+Licencia: Pixabay Content License (https://pixabay.com/service/license-summary/)
+
+Los 8 sonidos de esta carpeta se descargaron de Pixabay. Abajo esta el nombre ORIGINAL de cada archivo, el nombre con el que
+se usa en el proyecto y para que sirve. Faltan el AUTOR y el ENLACE de cada uno: complétalos tu (copialos de la pagina de
+Pixabay de cada sonido; no se inventaron).
+
+Cuando termines, estos mismos datos se pueden pasar al panel CREDITOS del menu (Assets/Scripts/Editor/BackroomsMenuBuilder.cs,
+texto "SONIDOS") y al README.md.
+
+-----------------------------------------------------------------------------------------------------------------------------
+1) Nombre original : freesound_community-low-monster-roar-97413.mp3
+   En el proyecto  : rugido_entidad.mp3
+   Se usa para     : rugido de la entidad al detectar al jugador (una vez al pasar a persecucion, 3D)
+   Autor           : (COMPLETAR)
+   Enlace          : (COMPLETAR)
+   Licencia        : Pixabay Content License
+
+2) Nombre original : freesound_community-single-pistol-gunshot-33-37187.mp3
+   En el proyecto  : disparo_pistola.mp3
+   Se usa para     : disparo de la pistola
+   Autor           : (COMPLETAR)
+   Enlace          : (COMPLETAR)
+   Licencia        : Pixabay Content License
+
+3) Nombre original : incesante-metalic-hit-479257.mp3
+   En el proyecto  : golpe_barra.mp3
+   Se usa para     : golpe de la barra
+   Autor           : (COMPLETAR)
+   Enlace          : (COMPLETAR)
+   Licencia        : Pixabay Content License
+
+4) Nombre original : freesound_community-tiny-vicious-creature-47253.mp3
+   En el proyecto  : mini_monstruo.mp3
+   Se usa para     : grito / mordisco de los mini monstruos al atacar y al morir (se usan dos fragmentos del archivo)
+   Autor           : (COMPLETAR)
+   Enlace          : (COMPLETAR)
+   Licencia        : Pixabay Content License
+
+5) Nombre original : lenspulse-intense-cinematic-heartbeat-sound-effect-584627.mp3
+   En el proyecto  : latido.mp3
+   Se usa para     : latido durante la persecucion (se usa un solo "lub-dub" del archivo y se acelera con el peligro)
+   Autor           : (COMPLETAR)   [el nombre del archivo empieza con "lenspulse"; confirmalo en Pixabay]
+   Enlace          : (COMPLETAR)
+   Licencia        : Pixabay Content License
+
+6) Nombre original : freesound_community-039888_faulty-fluorescent-light-starter-amp-humwav-61228.mp3
+   En el proyecto  : zumbido_luz.mp3
+   Se usa para     : zumbido de las luces fluorescentes del laberinto (3D, corto alcance, sincronizado con el parpadeo)
+   Autor           : (COMPLETAR)
+   Enlace          : (COMPLETAR)
+   Licencia        : Pixabay Content License
+
+7) Nombre original : fronbondi_skegs-drone-dark-mechanical-grinding-ambient-background-522545.mp3
+   En el proyecto  : drone_fondo.mp3
+   Se usa para     : ambiente grave de fondo en la partida y en el menu (bucle, 2D, volumen bajo)
+   Autor           : (COMPLETAR)
+   Enlace          : (COMPLETAR)
+   Licencia        : Pixabay Content License
+
+8) Nombre original : universfield-male-death-scream-123078.mp3
+   En el proyecto  : grito_muerte.mp3
+   Se usa para     : grito del jugador al ser devorado (pantalla de derrota)
+   Autor           : (COMPLETAR)
+   Enlace          : (COMPLETAR)
+   Licencia        : Pixabay Content License
+
+-----------------------------------------------------------------------------------------------------------------------------
+Nota tecnica: los archivos originales no se modifican. El juego los recorta, mezcla a mono y baja su volumen al arrancar
+(ver Assets/Scripts/SonidosPlaceholder.cs). Para cambiar uno, reemplaza el archivo con el mismo nombre en esta carpeta.

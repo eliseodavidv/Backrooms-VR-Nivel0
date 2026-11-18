@@ -144,33 +144,9 @@ public static class BackroomsCombateBuilder
                 dst.gameObject.SetActive(false);
                 pis.destello = dst.gameObject;
 
-                // Contador de balas en el lateral de la corredera (se lee al apuntar la pistola hacia uno mismo).
-                var tx = go.transform.Find("Balas");
-                if (tx == null)
-                {
-                    var o = new GameObject("Balas");
-                    o.transform.SetParent(go.transform, false);
-                    tx = o.transform;
-                    o.AddComponent<TextMesh>();
-                }
-                tx.localPosition = new Vector3(0.019f, 0.052f, 0.07f);
-                tx.localRotation = Quaternion.Euler(0f, 90f, 0f);
-                tx.localScale = Vector3.one * 0.01f;
-                var tm = tx.GetComponent<TextMesh>();
-                Font f = null;
-                try { f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); } catch { }
-                if (f == null) { try { f = Resources.GetBuiltinResource<Font>("Arial.ttf"); } catch { } }
-                tm.font = f;
-                tm.fontSize = 48;
-                tm.characterSize = 1f;
-                tm.anchor = TextAnchor.MiddleCenter;
-                tm.alignment = TextAlignment.Center;
-                tm.text = pis.balasMax.ToString();
-                var tr = tx.GetComponent<MeshRenderer>();
-                tr.sharedMaterial = f != null ? f.material : matTexto;
-                tr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                tr.receiveShadows = false;
-                pis.textoBalas = tm;
+                // Balas infinitas: no hay contador. Si una version anterior dejo el cartel "Balas", se quita.
+                var viejoContador = go.transform.Find("Balas");
+                if (viejoContador != null) Object.DestroyImmediate(viejoContador.gameObject);
 
                 EditorUtility.SetDirty(pis);
                 pistolas++;

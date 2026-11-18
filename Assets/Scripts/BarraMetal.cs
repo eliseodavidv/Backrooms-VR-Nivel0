@@ -26,6 +26,12 @@ public class BarraMetal : ArmaAgarrable
     // Ultima velocidad medida de la punta (util para depurar y probar).
     public float VelocidadPunta { get; private set; }
 
+    protected override void Awake()
+    {
+        base.Awake();
+        Sonido3D.Preparar(audioFuente, BusAudio.SFX, true, 1f, 25f);   // espacializador de Meta + eco de pasillo
+    }
+
     protected override void AlAgarrar() { hayPrev = false; }
 
     protected override void Update()

@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbfacac5b8dde704ab2db8252de6dd8e, type: 3}
+  m_Name: BibliotecaSonidos
+  m_EditorClassIdentifier: 
+  zumbidoSalida: {fileID: 0}
+  pasosEntidad: {fileID: 0}
+  respiracionEntidad: {fileID: 0}
+  latido: {fileID: 8300000, guid: d33daebb033c9854fbdeeef2ffee860d, type: 3}
+  rugidoEntidad: {fileID: 8300000, guid: 856ef5030d5821540bd3682ec20b6951, type: 3}
+  disparo: {fileID: 8300000, guid: 7832614a25780464f8f6115186b37795, type: 3}
+  miniMonstruo: {fileID: 8300000, guid: 28c70dae4b61cfc4998087f0f2badfbc, type: 3}
+  gritoMuerte: {fileID: 8300000, guid: d8eb2eca07a89574584040c20238ef5b, type: 3}
+  golpeBarra: {fileID: 8300000, guid: b76f9b1cbc2eef0458cdb5a156442eb8, type: 3}
+  clicArma: {fileID: 0}
+  impactoMini: {fileID: 0}
+  mordisco: {fileID: 0}
+  muerteMini: {fileID: 0}
+  teletransporte: {fileID: 0}
+  droneFondo: {fileID: 8300000, guid: 86977325a35fbf449be54cc10ca88e1c, type: 3}
+  victoria: {fileID: 0}
+  derrota: {fileID: 0}
+  zumbidoLuz: {fileID: 8300000, guid: c3b11fa9470b02f49a89aafd6d19fb50, type: 3}
+  chasquidoLuz: {fileID: 0}
+  musicaPersecucion: {fileID: 0}
+  uiClick: {fileID: 0}
+  uiHover: {fileID: 0}
+  susurros: []

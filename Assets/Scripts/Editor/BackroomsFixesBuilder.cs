@@ -75,6 +75,7 @@ public static class BackroomsFixesBuilder
         int n = 0;
         foreach (var g in raiz.GetComponentsInChildren<Graphic>(true))
         {
+            if (g is TMPro.TMP_Text) continue; // los TMP usan su propio material (shader Overlay de TextMeshPro)
             g.material = mat;
             EditorUtility.SetDirty(g);
             n++;

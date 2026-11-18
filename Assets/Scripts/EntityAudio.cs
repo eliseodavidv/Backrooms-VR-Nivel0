@@ -17,6 +17,9 @@ public class EntityAudio : MonoBehaviour
     {
         ia = GetComponent<EntityAI>();
         agente = GetComponent<NavMeshAgent>();
+        // Si hay audio real en Assets/Audio/Reales (pasos_entidad / respiracion_entidad), reemplaza al provisional.
+        var realPasos = SonidosPlaceholder.PasosEntidad; if (realPasos != null) pasos = realPasos;
+        var realResp = SonidosPlaceholder.RespiracionEntidad; if (realResp != null) respiracion = realResp;
         sPasos = CrearFuente("Audio_Pasos", pasos, 0f);
         sRespiracion = CrearFuente("Audio_Respiracion", respiracion, 2.0f);
     }
@@ -36,6 +39,7 @@ public class EntityAudio : MonoBehaviour
         s.maxDistance = distanciaMaxima;
         s.dopplerLevel = 0f;
         s.volume = 0f;
+        Sonido3D.Preparar(s, BusAudio.SFX, true);   // espacializador de Meta + grupo SFX (eco de pasillo)
         if (clip != null) s.Play();
         return s;
     }

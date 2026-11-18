@@ -24,6 +24,14 @@ public class MiniMonstruo : MonoBehaviour, IDanable
     public float alturaOjos = 0.3f;
     public float tiempoPerdida = 4f;            // sigue buscando tanto tiempo tras perderte de vista
 
+    [Header("Escondite del jugador (nichos)")]
+    [Tooltip("Altura maxima de la cabeza para considerar al jugador agachado (la misma de la entidad).")]
+    public float alturaAgachado = 1.1f;
+    [Tooltip("Si pierde al jugador porque se escondio, mira alrededor de donde lo vio entre estos dos tiempos (s) y luego se aleja.")]
+    public Vector2 tiempoMirarAlrededor = new Vector2(4f, 6f);
+    public float distanciaAlejarse = 10f;       // m al nicho
+    public float tiempoEvitarNicho = 20f;       // s sin volver a ese nicho
+
     [Header("Ataque")]
     public float distanciaMordisco = 0.75f;     // horizontal, hasta la cabeza del jugador
     public float pausaTrasMordisco = 0.8f;
@@ -34,6 +42,9 @@ public class MiniMonstruo : MonoBehaviour, IDanable
     public Collider colision;
     public AudioSource audioFuente;
     public Animator animador;                    // opcional: parametros Vel (float), Morder y Morir (triggers)
+    [Tooltip("Velocidad de la animacion de caminar: vagando / persiguiendo (no hay clip de correr).")]
+    public float velAnimVagar = 1.6f;
+    public float velAnimPersecucion = 2.2f;
 
     public Estado estado { get; private set; } = Estado.Vagar;
     public int Vida { get; private set; }
@@ -48,6 +59,16 @@ public class MiniMonstruo : MonoBehaviour, IDanable
     private GameManager.Fase ultimaFase = GameManager.Fase.Menu;
     private float proximaVista, proximoDestino, ultimaVistaTiempo, reanudarMordisco, fin;
     private float flashFin;
+
+    // Escondite: ultimo nicho evitado, ultimo punto donde vio al jugador y fases "mira alrededor" / "se aleja".
+    private NichoZona nichoEvitado;
+    private float evitarHasta;
+    private bool escondido;
+    private bool miraAlrededor;
+    private float finMirada;
+    private bool alejandose;
+    private float finAlejarse;
+    private Vector3 ultimaPosVista;
     private MaterialPropertyBlock bloque;
     private Color colorOriginal;
     private readonly RaycastHit[] rayos = new RaycastHit[12];
@@ -56,6 +77,7 @@ public class MiniMonstruo : MonoBehaviour, IDanable
     static readonly int IdVel = Animator.StringToHash("Vel");
     static readonly int IdMorder = Animator.StringToHash("Morder");
     static readonly int IdMorir = Animator.StringToHash("Morir");
+    static readonly int IdVelCaminar = Animator.StringToHash("VelCaminar");
     static readonly Color ColorGolpe = new Color(1.8f, 0.5f, 0.5f);
 
     void Awake()
@@ -66,6 +88,7 @@ public class MiniMonstruo : MonoBehaviour, IDanable
         escalaOriginal = transform.localScale;
         Vida = vidaMax;
         bloque = new MaterialPropertyBlock();
+        Sonido3D.Preparar(audioFuente, BusAudio.SFX, true, 1f, 20f);   // espacializador de Meta + eco de pasillo
         if (cuerpo != null) colorOriginal = cuerpo.sharedMaterial.color;
     }
 
@@ -93,7 +116,11 @@ public class MiniMonstruo : MonoBehaviour, IDanable
         if (flashFin > 0f && Time.time >= flashFin) { flashFin = 0f; PonerColor(colorOriginal); }
 
         if (animador != null && agente.enabled && agente.isOnNavMesh)
+        {
             animador.SetFloat(IdVel, (estado == Estado.Vagar || estado == Estado.Perseguir) ? agente.velocity.magnitude : 0f);
+            // Sin clip de correr: al perseguir se acelera la animacion de caminar.
+            animador.SetFloat(IdVelCaminar, estado == Estado.Perseguir ? velAnimPersecucion : velAnimVagar);
+        }
 
         if (estado == Estado.Muriendo) { AnimarMuerte(); return; }
         if (estado == Estado.Muerto) return;
@@ -104,20 +131,39 @@ public class MiniMonstruo : MonoBehaviour, IDanable
         if (Time.time < reanudarMordisco) { agente.isStopped = true; return; }
         agente.isStopped = false;
 
+        // Escondido en un nicho (misma condicion que la entidad): no lo ve, no lo muerde y pierde el rastro.
+        var nichoActual = NichoZona.NichoDelJugador(jugador, alturaAgachado);
+        escondido = nichoActual != null;
+        if (escondido) { nichoEvitado = nichoActual; evitarHasta = Time.time + tiempoEvitarNicho; }
+        bool evitando = nichoEvitado != null && Time.time < evitarHasta;
+
         if (Time.time >= proximaVista)
         {
             proximaVista = Time.time + 0.1f;
-            if (Ve()) ultimaVistaTiempo = Time.time;
+            if (Ve()) { ultimaVistaTiempo = Time.time; ultimaPosVista = jugador.position; }
         }
-        bool viendo = Time.time - ultimaVistaTiempo < 0.25f;
+        bool viendo = !escondido && Time.time - ultimaVistaTiempo < 0.25f;
 
         if (estado == Estado.Vagar)
         {
-            if (viendo) { estado = Estado.Perseguir; agente.speed = velocidadPersecucion; proximoDestino = 0f; }
-            else Vagar();
+            if (viendo) { estado = Estado.Perseguir; agente.speed = velocidadPersecucion; proximoDestino = 0f; alejandose = false; }
+            else
+            {
+                // Si el jugador esta escondido y este mini esta cerca del nicho, no se queda ahi: se aleja.
+                if (evitando && !alejandose && Time.time >= finAlejarse && DistanciaPlana(transform.position, nichoEvitado.Centro) < distanciaAlejarse) Alejarse();
+                Vagar();
+            }
         }
         else // Perseguir
         {
+            // Perdio al jugador porque se escondio: mira alrededor de donde lo vio unos segundos y luego se aleja (sin seguirlo).
+            if (escondido && !miraAlrededor) { miraAlrededor = true; finMirada = Time.time + Random.Range(tiempoMirarAlrededor.x, tiempoMirarAlrededor.y); proximoDestino = 0f; }
+            if (miraAlrededor)
+            {
+                if (viendo) miraAlrededor = false;                       // salio y lo vio de nuevo
+                else if (Time.time >= finMirada) { Alejarse(); return; }
+                else { MirarAlrededor(); return; }
+            }
             if (!viendo && Time.time - ultimaVistaTiempo > tiempoPerdida)
             {
                 estado = Estado.Vagar;
@@ -135,10 +181,55 @@ public class MiniMonstruo : MonoBehaviour, IDanable
         }
     }
 
+    // Revisa los alrededores del ultimo punto donde lo vio (radio ~3 m), sin acercarse al jugador escondido.
+    void MirarAlrededor()
+    {
+        agente.speed = velocidadVagar;
+        if (Time.time < proximoDestino) return;
+        proximoDestino = Time.time + Random.Range(1.2f, 2f);
+        Vector2 r = Random.insideUnitCircle * 3f;
+        NavMeshHit h;
+        if (NavMesh.SamplePosition(ultimaPosVista + new Vector3(r.x, 0f, r.y), out h, 3f, NavMesh.AllAreas)) agente.SetDestination(h.position);
+    }
+
+    // Vuelve a vagar, pero primero se va a un punto del NavMesh a >= distanciaAlejarse del nicho. Durante 'tiempoEvitarNicho'
+    // sus destinos de vagar tambien respetan esa distancia.
+    void Alejarse()
+    {
+        miraAlrededor = false;
+        estado = Estado.Vagar;
+        agente.speed = velocidadVagar;
+        alejandose = false;
+        finAlejarse = Time.time + 2f;              // si no hay punto valido, no reintenta cada cuadro
+        if (nichoEvitado != null)
+        {
+            Vector3 c = nichoEvitado.Centro;
+            for (int i = 0; i < 16; i++)
+            {
+                Vector2 r = Random.insideUnitCircle.normalized * Random.Range(distanciaAlejarse, distanciaAlejarse + 8f);
+                NavMeshHit h;
+                if (!NavMesh.SamplePosition(c + new Vector3(r.x, 0f, r.y), out h, 3f, NavMesh.AllAreas)) continue;
+                if (DistanciaPlana(h.position, c) < distanciaAlejarse) continue;
+                agente.SetDestination(h.position);
+                alejandose = true;
+                finAlejarse = Time.time + 12f;
+                break;
+            }
+        }
+        proximoDestino = Time.time + 8f;
+    }
+
+    static float DistanciaPlana(Vector3 a, Vector3 b)
+    {
+        a.y = 0f; b.y = 0f;
+        return Vector3.Distance(a, b);
+    }
+
     // ---------- percepcion ----------
 
     bool Ve()
     {
+        if (escondido) return false;
         Vector3 ojos = transform.position + Vector3.up * alturaOjos;
         Vector3 haciaJugador = jugador.position - ojos;
         float distPlana = new Vector2(haciaJugador.x, haciaJugador.z).magnitude;
@@ -174,21 +265,39 @@ public class MiniMonstruo : MonoBehaviour, IDanable
     void Vagar()
     {
         agente.speed = velocidadVagar;
+        // Se esta alejando de un nicho: sigue hasta llegar (o 12 s) antes de vagar de nuevo.
+        if (alejandose)
+        {
+            if (Time.time < finAlejarse && (agente.pathPending || agente.remainingDistance > 0.6f)) return;
+            alejandose = false;
+            proximoDestino = 0f;
+        }
         if (Time.time < proximoDestino && agente.remainingDistance > 0.3f) return;
         proximoDestino = Time.time + Random.Range(3f, 6f);
-        Vector2 r = Random.insideUnitCircle * radioVagar;
-        NavMeshHit h;
-        if (NavMesh.SamplePosition(hogar + new Vector3(r.x, 0f, r.y), out h, 3f, NavMesh.AllAreas)) agente.SetDestination(h.position);
+        bool evitando = nichoEvitado != null && Time.time < evitarHasta;
+        for (int intento = 0; intento < (evitando ? 8 : 1); intento++)
+        {
+            Vector2 r = Random.insideUnitCircle * radioVagar;
+            NavMeshHit h;
+            if (!NavMesh.SamplePosition(hogar + new Vector3(r.x, 0f, r.y), out h, 3f, NavMesh.AllAreas)) continue;
+            // 20 s sin volver al nicho: los destinos de vagar quedan a >= distanciaAlejarse de el.
+            if (evitando && DistanciaPlana(h.position, nichoEvitado.Centro) < distanciaAlejarse) continue;
+            agente.SetDestination(h.position);
+            break;
+        }
     }
 
     void Morder()
     {
+        if (escondido) return;
         Vector3 d = jugador.position - transform.position;
         d.y = 0f;
         if (d.magnitude > distanciaMordisco) return;
         if (salud != null && salud.RecibirMordisco())
         {
             reanudarMordisco = Time.time + pausaTrasMordisco;
+            var grito = SonidosPlaceholder.MiniAtaque;          // grito / mordisco real (si hay archivo mini_monstruo)
+            if (grito != null) Sonar(grito);
             if (animador != null) animador.SetTrigger(IdMorder);
             agente.ResetPath();
         }
@@ -240,8 +349,13 @@ public class MiniMonstruo : MonoBehaviour, IDanable
         transform.localScale = escalaOriginal;
     }
 
+    // Partida nueva desde cero (lo llama el GameManager): vivo, en su sitio inicial y vagando.
+    public void ReiniciarPartida() { Reaparecer(); }
+
     void Reaparecer()
     {
+        flashFin = 0f;
+        fin = 0f;
         Vida = vidaMax;
         estado = Estado.Vagar;
         transform.localScale = escalaOriginal;
@@ -257,6 +371,12 @@ public class MiniMonstruo : MonoBehaviour, IDanable
         ultimaVistaTiempo = -100f;
         proximoDestino = 0f;
         reanudarMordisco = 0f;
+        nichoEvitado = null;
+        evitarHasta = 0f;
+        escondido = false;
+        miraAlrededor = false;
+        alejandose = false;
+        finAlejarse = 0f;
     }
 
     // ---------- utilidades ----------

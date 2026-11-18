@@ -17,3 +17,8 @@ Assets/Modelo 3D/Texturas-adicionales/
 Assets/Modelo 3D/Texturas-adicionales.meta
 Assets/Modelo 3D/Modelos/Planta-Andahuasi-Electrico.obj
 Assets/Modelo 3D/Modelos/Planta-Andahuasi-Electrico.obj.meta
+
+TempAssembly.dll
+*.pdb
+Respaldo_antes_*/
+Captures/

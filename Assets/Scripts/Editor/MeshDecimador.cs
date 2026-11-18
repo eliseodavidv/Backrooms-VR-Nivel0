@@ -25,6 +25,15 @@ public static class MeshDecimador
 
     struct Arista { public double costo; public int a, b, vA, vB; }
 
+    // Ganchos para malla skineada (opcionales; null/vacio = comportamiento de siempre):
+    //  - FactorCosto(a, b): multiplica el costo de colapsar el vertice 'a' en 'b' (p. ej. penaliza unir vertices con pesos de hueso distintos).
+    //  - UltimoOrigen: tras Decimar, indice del vertice ORIGINAL de cada vertice de la malla resultante (los vertices que quedan
+    //    son originales, asi que sus pesos de piel se heredan tal cual).
+    public static System.Func<int, int, double> FactorCosto;
+    public static int[] UltimoOrigen;
+    // Un colapso se rechaza si gira la normal de un triangulo mas que esto (coseno). 0.2 = estricto (valor de siempre).
+    public static float UmbralNormal = 0.2f;
+
     public static Mesh Decimar(Mesh src, int trisObjetivo)
     {
         var pos = new List<Vector3>(src.vertices);
@@ -82,8 +91,13 @@ public static class MeshDecimador
         {
             var qq = new Q(); qq.Add(qs[a]); qq.Add(qs[b]);
             double ca = qq.Err(pos[b]); // colapsa a -> b
-            cola.Add((ca, uniq++, a, b, version[a], version[b]));
             double cb = qq.Err(pos[a]); // colapsa b -> a
+            if (FactorCosto != null)
+            {
+                ca = (ca + 1e-9) * FactorCosto(a, b);
+                cb = (cb + 1e-9) * FactorCosto(b, a);
+            }
+            cola.Add((ca, uniq++, a, b, version[a], version[b]));
             cola.Add((cb, uniq++, b, a, version[b], version[a]));
         };
         var vistas = new HashSet<long>();
@@ -113,7 +127,7 @@ public static class MeshDecimador
                 Vector3 antes = Vector3.Cross(p1 - p0, p2 - p0);
                 for (int k = 0; k < 3; k++) if (t[k] == a) { if (k == 0) p0 = pos[b]; else if (k == 1) p1 = pos[b]; else p2 = pos[b]; }
                 Vector3 despues = Vector3.Cross(p1 - p0, p2 - p0);
-                if (despues.sqrMagnitude < 1e-16f || Vector3.Dot(antes.normalized, despues.normalized) < 0.2f) { malo = true; break; }
+                if (despues.sqrMagnitude < 1e-16f || Vector3.Dot(antes.normalized, despues.normalized) < UmbralNormal) { malo = true; break; }
             }
             if (malo) continue;
 
@@ -157,6 +171,9 @@ public static class MeshDecimador
                 ntri[subDe[i]].Add(m);
             }
         }
+        var origen = new int[nvp.Count];
+        foreach (var kv in mapa) origen[kv.Value] = kv.Key;
+        UltimoOrigen = origen;
         var res = new Mesh { name = src.name + "_Low" };
         res.indexFormat = nvp.Count > 65000 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
         res.SetVertices(nvp); res.SetNormals(nn); res.SetUVs(0, nuv); res.SetTangents(nt);

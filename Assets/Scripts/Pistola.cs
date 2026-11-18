@@ -1,6 +1,7 @@
 using UnityEngine;
 
-// Pistola: dispara con el gatillo (indice) de la mano que la sostiene. 6 balas por partida, sin recarga.
+// Pistola: dispara con el gatillo (indice) de la mano que la sostiene. Balas infinitas: no hay limite, recarga
+// ni contador. Solo hay un tiempo minimo entre disparos (cadencia) para que no salgan sin control.
 // Hitscan con trazador visible; sonido y vibracion en la mano que dispara.
 public class Pistola : ArmaAgarrable
 {
@@ -8,17 +9,14 @@ public class Pistola : ArmaAgarrable
     public Transform boquilla;
     public LineRenderer trazador;
     public GameObject destello;
-    public TextMesh textoBalas;
     public AudioSource audioFuente;
 
     [Header("Combate")]
-    public int balasMax = 6;
-    public int danio = 2;
+    public int danio = 2;                 // los mini monstruos tienen 3 de vida: mueren con 2 disparos
     public float alcance = 40f;
-    public float cadencia = 0.25f;
+    [Tooltip("Tiempo minimo entre disparos (s).")]
+    public float cadencia = 0.2f;
     public float duracionEfecto = 0.06f;
-
-    public int Balas { get; private set; }
 
     private float proximoDisparo;
     private float apagarEfectos;
@@ -27,10 +25,9 @@ public class Pistola : ArmaAgarrable
     protected override void Awake()
     {
         base.Awake();
-        Balas = balasMax;
+        Sonido3D.Preparar(audioFuente, BusAudio.SFX, true, 1f, 25f);   // espacializador de Meta + eco de pasillo
         if (trazador != null) trazador.enabled = false;
         if (destello != null) destello.SetActive(false);
-        ActualizarTexto();
     }
 
     protected override void Update()
@@ -48,20 +45,11 @@ public class Pistola : ArmaAgarrable
             Disparar();
     }
 
-    // Devuelve true si salio una bala.
+    // Devuelve true si salio una bala (false solo si aun no pasa el tiempo minimo entre disparos).
     public bool Disparar()
     {
         if (Time.time < proximoDisparo) return false;
         proximoDisparo = Time.time + cadencia;
-
-        if (Balas <= 0)
-        {
-            Sonar(SonidosPlaceholder.Clic);
-            VibracionMano.Pulso(Mano, 0.2f, 0.04f);
-            return false;
-        }
-        Balas--;
-        ActualizarTexto();
 
         Vector3 origen = boquilla.position;
         Vector3 dir = boquilla.forward;
@@ -107,14 +95,11 @@ public class Pistola : ArmaAgarrable
         else SonidosPlaceholder.EnPunto(clip, transform.position);
     }
 
-    void ActualizarTexto()
-    {
-        if (textoBalas != null) textoBalas.text = Balas.ToString();
-    }
-
     protected override void ReiniciarEstado()
     {
-        Balas = balasMax;
-        ActualizarTexto();
+        proximoDisparo = 0f;
+        apagarEfectos = 0f;
+        if (trazador != null) trazador.enabled = false;
+        if (destello != null) destello.SetActive(false);
     }
 }

@@ -13,6 +13,9 @@ public class SaludJugador : MonoBehaviour
 
     public int Vida { get; private set; }
 
+    // Se dispara cada vez que cambia la vida (mordisco, inicio y reinicio de partida). Lo usa el indicador de vidas.
+    public event System.Action<int> OnVidaCambiada;
+
     private GameManager gm;
     private Material matDestello;
     private float invulnerableHasta;
@@ -23,6 +26,7 @@ public class SaludJugador : MonoBehaviour
     {
         Vida = vidaMax;
         gm = FindObjectOfType<GameManager>();
+        IndicadorVidas.Crear(this, gm);   // corazones en pantalla (se crea por codigo, sin tocar la escena)
         if (destelloDanio != null)
         {
             matDestello = destelloDanio.material;
@@ -37,7 +41,7 @@ public class SaludJugador : MonoBehaviour
             var f = gm.fase;
             if (f != GameManager.Fase.Pausa)
             {
-                if (f == GameManager.Fase.Jugando && ultimaFase != GameManager.Fase.Jugando) Vida = vidaMax;
+                if (f == GameManager.Fase.Jugando && ultimaFase != GameManager.Fase.Jugando) FijarVida(vidaMax);
                 ultimaFase = f;
             }
         }
@@ -59,16 +63,37 @@ public class SaludJugador : MonoBehaviour
         }
     }
 
+    // Partida nueva desde cero (lo llama el GameManager): vidas al maximo, sin invulnerabilidad ni destello rojo.
+    public void ReiniciarPartida()
+    {
+        FijarVida(vidaMax);
+        invulnerableHasta = 0f;
+        destelloFin = 0f;
+        if (destelloDanio != null) destelloDanio.enabled = false;
+        if (matDestello != null)
+        {
+            var c = matDestello.color;
+            c.a = 0f;
+            matDestello.color = c;
+        }
+    }
+
+    void FijarVida(int valor)
+    {
+        Vida = valor;
+        OnVidaCambiada?.Invoke(Vida);
+    }
+
     // Devuelve true si el mordisco hizo danyo.
     public bool RecibirMordisco()
     {
         if (gm == null || gm.fase != GameManager.Fase.Jugando) return false;
         if (Time.time < invulnerableHasta) return false;
         invulnerableHasta = Time.time + invulnerabilidad;
-        Vida--;
+        FijarVida(Vida - 1);
 
         ControllerHaptics.Pulse(1f, 0.25f);
-        SonidosPlaceholder.EnPunto(SonidosPlaceholder.Impacto, Camera.main != null ? Camera.main.transform.position : transform.position, 1f);
+        SonidosPlaceholder.EnPunto(SonidosPlaceholder.Mordisco, Camera.main != null ? Camera.main.transform.position : transform.position, 1f);
         if (destelloDanio != null)
         {
             destelloDanio.enabled = true;

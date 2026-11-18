@@ -16,6 +16,8 @@ public class ExitHum : MonoBehaviour
     void Awake()
     {
         bloque = new MaterialPropertyBlock();
+        var real = SonidosPlaceholder.ZumbidoSalida;   // audio real (zumbido_salida) si existe
+        if (real != null) zumbido = real;
         fuente = gameObject.AddComponent<AudioSource>();
         fuente.clip = zumbido;
         fuente.loop = true;
@@ -25,6 +27,7 @@ public class ExitHum : MonoBehaviour
         fuente.minDistance = 2f;
         fuente.maxDistance = distanciaMaxima;
         fuente.dopplerLevel = 0f;
+        Sonido3D.Preparar(fuente, BusAudio.Ambiente, true);
         if (zumbido != null) fuente.Play();
     }
 

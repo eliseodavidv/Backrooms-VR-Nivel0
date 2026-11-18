@@ -32,6 +32,16 @@ public class EntityAI : MonoBehaviour
     [Tooltip("Altura maxima de la cabeza (CenterEyeAnchor) para considerar al jugador agachado.")]
     public float alturaAgachado = 1.1f;
 
+    [Header("Escondite: comportamiento de la amenaza")]
+    [Tooltip("Si pierde al jugador porque se escondio, mira alrededor de su ultimo punto conocido entre estos dos tiempos (s) y luego se aleja.")]
+    public Vector2 tiempoMirarAlrededor = new Vector2(4f, 6f);
+    [Tooltip("Distancia minima (m) al nicho de los puntos de patrulla a los que se aleja.")]
+    public float distanciaAlejarse = 10f;
+    [Tooltip("Tiempo (s) que no vuelve a ese nicho desde que el jugador estuvo escondido en el.")]
+    public float tiempoEvitarNicho = 20f;
+    [Tooltip("Si el jugador sale o se levanta a menos de esta distancia y con vision, lo vuelve a detectar aunque no lo mire de frente.")]
+    public float radioRedeteccionCercana = 3f;
+
     [Header("Velocidades")]
     public float velocidadPatrulla = 1.5f;
     public float velocidadSospecha = 2.0f;
@@ -60,6 +70,13 @@ public class EntityAI : MonoBehaviour
     private float ultimoEstimulo;
     private float proximaExploracion;
     private readonly List<float> tiemposTeletransporte = new List<float>();
+
+    // Escondite: ultimo nicho donde estuvo el jugador y hasta cuando se evita; la busqueda por escondite dura pocos segundos.
+    private NichoZona nichoEvitado;
+    private float evitarHasta;
+    private bool buscaPorEscondite;
+    private float finMirada;
+    private int patrullaForzada = -1;
 
     private Renderer[] mallas;
     private Vector3 posInicial;
@@ -96,10 +113,20 @@ public class EntityAI : MonoBehaviour
             return;
         }
 
-        jugadorEscondido = NichoZona.JugadorEscondido(jugador, alturaAgachado);
+        var nichoActual = NichoZona.NichoDelJugador(jugador, alturaAgachado);
+        jugadorEscondido = nichoActual != null;
+        if (jugadorEscondido)
+        {
+            // Mientras esta escondido (y 'tiempoEvitarNicho' s despues) no patrulla ni busca cerca de ese nicho.
+            nichoEvitado = nichoActual;
+            evitarHasta = Time.time + tiempoEvitarNicho;
+            if (estadoActual == Estado.Busqueda && !buscaPorEscondite) IniciarMirada();
+        }
+        bool evitando = nichoEvitado != null && Time.time < evitarHasta;
         float distancia = DistanciaPlana(jugador.position);
         bool lineaDeVision = !jugadorEscondido && distancia <= radioSospecha && TieneLineaDeVision();
-        bool veEnCono = lineaDeVision && EnCono();
+        // Tras un escondite, si el jugador sale a menos de ~3 m y con vision, lo detecta aunque no este de frente.
+        bool veEnCono = lineaDeVision && (EnCono() || (evitando && distancia <= radioRedeteccionCercana));
 
         switch (estadoActual)
         {
@@ -147,6 +174,8 @@ public class EntityAI : MonoBehaviour
             case Estado.Busqueda:
                 if (lineaDeVision && distancia <= radioDeteccion)
                     Cambiar(Estado.Persecucion, "lo vuelve a ver a " + distancia.ToString("F1") + " m");
+                else if (buscaPorEscondite && Time.time >= finMirada)
+                    AlejarseDelNicho();
                 else if (Time.time - inicioEstado >= tiempoBusqueda)
                     Cambiar(Estado.Patrulla, "10 s sin encontrarlo");
                 else
@@ -184,11 +213,56 @@ public class EntityAI : MonoBehaviour
                 agente.speed = velocidadBusqueda;
                 proximaExploracion = Time.time + 2f;
                 IrA(ultimaPosicionConocida);
+                buscaPorEscondite = false;
+                if (jugadorEscondido) IniciarMirada();
                 break;
         }
+        if (nuevo != Estado.Busqueda) buscaPorEscondite = false;
 
         Debug.Log("[EntityAI] " + anterior + " -> " + nuevo + " (" + motivo + ")");
         OnCambioEstado?.Invoke(nuevo);
+    }
+
+    // Perdio al jugador porque se escondio: mira alrededor de su ultimo punto conocido unos 4-6 s y luego se aleja.
+    void IniciarMirada()
+    {
+        buscaPorEscondite = true;
+        finMirada = Time.time + Random.Range(tiempoMirarAlrededor.x, tiempoMirarAlrededor.y);
+    }
+
+    // Se va a un punto de patrulla lejano (>= distanciaAlejarse del nicho). Cambiar(Patrulla) respeta el punto elegido.
+    void AlejarseDelNicho()
+    {
+        patrullaForzada = ElegirPuntoLejano();
+        Cambiar(Estado.Patrulla, "jugador escondido: se aleja del nicho (>= " + distanciaAlejarse + " m)");
+    }
+
+    // Punto de patrulla lejano al nicho evitado: uno al azar de los validos; si ninguno lo es, el mas lejano.
+    int ElegirPuntoLejano()
+    {
+        if (puntosDePatrulla == null || puntosDePatrulla.Length == 0 || nichoEvitado == null) return -1;
+        var validos = new List<int>();
+        int masLejano = 0;
+        float mayor = -1f;
+        for (int i = 0; i < puntosDePatrulla.Length; i++)
+        {
+            float d = DistanciaPlanaEntre(puntosDePatrulla[i].position, nichoEvitado.Centro);
+            if (d >= distanciaAlejarse) validos.Add(i);
+            if (d > mayor) { mayor = d; masLejano = i; }
+        }
+        return validos.Count > 0 ? validos[Random.Range(0, validos.Count)] : masLejano;
+    }
+
+    // Durante el tiempo de evitacion, un punto de patrulla cerca del nicho no se usa.
+    bool Evita(Vector3 punto)
+    {
+        return nichoEvitado != null && Time.time < evitarHasta && DistanciaPlanaEntre(punto, nichoEvitado.Centro) < distanciaAlejarse;
+    }
+
+    static float DistanciaPlanaEntre(Vector3 a, Vector3 b)
+    {
+        a.y = 0f; b.y = 0f;
+        return Vector3.Distance(a, b);
     }
 
     void EntrarEnSospecha(Vector3 donde, string motivo)
@@ -219,6 +293,10 @@ public class EntityAI : MonoBehaviour
     {
         tiemposTeletransporte.Clear();
         jugadorEscondido = false;
+        nichoEvitado = null;
+        evitarHasta = 0f;
+        buscaPorEscondite = false;
+        patrullaForzada = -1;
         MostrarMalla(true);
         // Vuelve a su punto de patrulla inicial.
         if (agente != null && agente.enabled && gameObject.activeInHierarchy)
@@ -251,14 +329,21 @@ public class EntityAI : MonoBehaviour
     void IrAPuntoDePatrulla(bool elMasCercano = false)
     {
         if (puntosDePatrulla == null || puntosDePatrulla.Length == 0) return;
-        if (elMasCercano)
+        if (patrullaForzada >= 0 && patrullaForzada < puntosDePatrulla.Length)
+        {
+            indicePatrulla = patrullaForzada;      // se aleja de un escondite: va a ese punto lejano
+            patrullaForzada = -1;
+        }
+        else if (elMasCercano)
         {
             float mejor = float.MaxValue;
             for (int i = 0; i < puntosDePatrulla.Length; i++)
             {
+                if (Evita(puntosDePatrulla[i].position)) continue;
                 float d = (puntosDePatrulla[i].position - transform.position).sqrMagnitude;
                 if (d < mejor) { mejor = d; indicePatrulla = i; }
             }
+            if (mejor == float.MaxValue) indicePatrulla = ElegirPuntoLejano();   // todos cerca del nicho: el mas lejano
         }
         IrA(puntosDePatrulla[indicePatrulla].position);
     }
@@ -268,7 +353,17 @@ public class EntityAI : MonoBehaviour
         if (puntosDePatrulla == null || puntosDePatrulla.Length == 0) return;
         if (!agente.pathPending && agente.remainingDistance < 0.5f)
         {
-            indicePatrulla = (indicePatrulla + 1) % puntosDePatrulla.Length;
+            // Siguiente punto de la ronda, saltando los que quedan cerca del nicho mientras se evita.
+            int n = puntosDePatrulla.Length;
+            int siguiente = (indicePatrulla + 1) % n;
+            for (int k = 0; k < n && Evita(puntosDePatrulla[siguiente].position); k++) siguiente = (siguiente + 1) % n;
+            indicePatrulla = siguiente;
+            IrA(puntosDePatrulla[indicePatrulla].position);
+        }
+        else if (nichoEvitado != null && Time.time < evitarHasta && Evita(puntosDePatrulla[indicePatrulla].position))
+        {
+            // Iba hacia un punto que quedo cerca del nicho evitado: cambia a uno lejano.
+            indicePatrulla = ElegirPuntoLejano();
             IrA(puntosDePatrulla[indicePatrulla].position);
         }
     }
